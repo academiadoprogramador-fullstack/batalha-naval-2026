@@ -6,5 +6,81 @@
     </div>
   </header>
 
-  <main class="mx-auto w-full max-w-5xl flex-1 px-4 py-6"></main>
+  <main class="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:py-10">
+    @if (fase() === 'apresentacao') {
+      <section class="mx-auto flex max-w-2xl flex-col items-center gap-6 py-12 text-center sm:py-20" aria-labelledby="titulo-apresentacao">
+        <div class="rounded-full bg-celula p-5 text-embarcacao" aria-hidden="true"><svg lucideShip class="size-12"></svg></div>
+        <div class="space-y-2">
+          <h2 id="titulo-apresentacao" class="text-3xl font-bold tracking-tight sm:text-4xl">Prepare sua frota</h2>
+          <p class="text-base text-slate-600 sm:text-lg">Posicione suas cinco embarcações no tabuleiro para deixar a partida pronta.</p>
+        </div>
+        <button type="button" class="rounded-lg bg-embarcacao px-6 py-3 font-semibold text-white transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-embarcacao" (click)="iniciarPreparacao()">
+          Iniciar partida
+        </button>
+      </section>
+    } @else if (fase() === 'preparacao') {
+      <section class="space-y-6" aria-labelledby="titulo-preparacao">
+        <div class="space-y-1">
+          <h2 id="titulo-preparacao" class="text-2xl font-bold">Prepare sua frota</h2>
+          <p class="text-slate-600">Selecione uma embarcação, escolha a orientação e indique a casa de origem.</p>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <section class="min-w-0 max-w-[29rem] space-y-3" aria-label="Tabuleiro do jogador">
+            <h3 class="font-semibold">Seu tabuleiro</h3>
+            <div class="overflow-x-auto rounded-lg border border-celula-borda bg-white p-2 sm:p-3" tabindex="0" aria-label="Tabuleiro; role horizontalmente para ver todas as colunas">
+              <div class="grid w-full max-w-[27rem] grid-cols-[1.5rem_repeat(10,minmax(0,1fr))] gap-1" role="grid" aria-label="Tabuleiro do jogador, linhas A a J e colunas 1 a 10">
+                <span aria-hidden="true"></span>
+                @for (coluna of colunas; track coluna) {
+                  <span class="grid h-9 place-items-center text-sm font-semibold" role="columnheader">{{ coluna }}</span>
+                }
+                @for (linha of linhas; track linha) {
+                  <span class="grid h-10 place-items-center text-sm font-semibold" role="rowheader">{{ linha }}</span>
+                  @for (coluna of colunas; track coluna) {
+                    <button type="button" role="gridcell" class="grid aspect-square min-h-0 place-items-center rounded border border-celula-borda text-xs transition hover:border-embarcacao focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-embarcacao" [class.bg-embarcacao]="casaOcupada(linha, coluna)" [class.text-white]="casaOcupada(linha, coluna)" [attr.aria-label]="'Posicionar em ' + linha + coluna + (casaOcupada(linha, coluna) ? ', ocupada' : ', livre')" [attr.aria-pressed]="casaOcupada(linha, coluna)" (click)="posicionar(linha, coluna)">
+                      @if (casaOcupada(linha, coluna)) { <span aria-hidden="true">●</span> } @else { <span class="sr-only">{{ linha }}{{ coluna }}</span> }
+                    </button>
+                  }
+                }
+              </div>
+            </div>
+          </section>
+
+          <aside class="space-y-5">
+            <fieldset class="space-y-2">
+              <legend class="font-semibold">Embarcações</legend>
+              <div class="space-y-2">
+                @for (embarcacao of embarcacoes; track embarcacao.tipo) {
+                  <button type="button" class="flex min-h-12 w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-embarcacao" [class.border-embarcacao]="tipoSelecionado() === embarcacao.tipo" [class.bg-celula]="tipoSelecionado() === embarcacao.tipo && !tabuleiroJogador().embarcacoes.some(e => e.tipo === embarcacao.tipo)" [class.border-celula-borda]="tipoSelecionado() !== embarcacao.tipo" [style.background-color]="tabuleiroJogador().embarcacoes.some(e => e.tipo === embarcacao.tipo) ? coresEmbarcacao[embarcacao.tipo] : null" [attr.aria-pressed]="tipoSelecionado() === embarcacao.tipo" [attr.aria-label]="embarcacao.nome + ', tamanho ' + embarcacao.tamanho + ', ' + (tabuleiroJogador().embarcacoes.some(e => e.tipo === embarcacao.tipo) ? 'posicionada' : 'pendente') + (tipoSelecionado() === embarcacao.tipo ? ', selecionada' : '')" (click)="selecionarEmbarcacao(embarcacao.tipo)">
+                    <span><span class="block font-medium">{{ embarcacao.nome }}</span><span class="text-sm text-slate-600">{{ embarcacao.tamanho }} casas</span></span>
+                    <span class="text-right text-sm">{{ tabuleiroJogador().embarcacoes.some(e => e.tipo === embarcacao.tipo) ? 'Posicionada' : 'Pendente' }}@if (tipoSelecionado() === embarcacao.tipo) { <span class="block font-semibold">Selecionada</span> }</span>
+                  </button>
+                }
+              </div>
+            </fieldset>
+
+            <fieldset class="space-y-2">
+              <legend class="font-semibold">Orientação</legend>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" class="min-h-11 rounded-lg border px-3 py-2" [class.border-embarcacao]="orientacao() === 'horizontal'" [class.bg-celula]="orientacao() === 'horizontal'" [attr.aria-pressed]="orientacao() === 'horizontal'" (click)="selecionarOrientacao('horizontal')">Horizontal</button>
+                <button type="button" class="min-h-11 rounded-lg border px-3 py-2" [class.border-embarcacao]="orientacao() === 'vertical'" [class.bg-celula]="orientacao() === 'vertical'" [attr.aria-pressed]="orientacao() === 'vertical'" (click)="selecionarOrientacao('vertical')">Vertical</button>
+              </div>
+            </fieldset>
+
+            <p class="min-h-12 rounded-lg bg-slate-50 p-3 text-sm text-slate-700" role="status" aria-live="polite">{{ mensagem() }}</p>
+            <div class="space-y-2">
+              <button type="button" class="min-h-12 w-full rounded-lg bg-embarcacao px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" [disabled]="!podeAvancar()" (click)="avancar()">Avançar para a partida</button>
+              @if (!podeAvancar()) { <p class="text-sm text-slate-600">Posicione as cinco embarcações para concluir a preparação.</p> }
+            </div>
+          </aside>
+        </div>
+      </section>
+    } @else {
+      <section class="mx-auto max-w-xl space-y-4 py-12 text-center" aria-labelledby="titulo-pronto">
+        <div class="mx-auto grid size-16 place-items-center rounded-full bg-celula text-embarcacao" aria-hidden="true"><svg lucideShip class="size-8"></svg></div>
+        <h2 id="titulo-pronto" class="text-2xl font-bold">Preparação concluída</h2>
+        <p class="text-slate-600" role="status">As duas frotas estão prontas. A partida ainda não começou.</p>
+      </section>
+    }
+  </main>
 </div>
