@@ -1,0 +1,20 @@
+<section class="min-w-0 space-y-2" [attr.aria-label]="nome">
+  <h3 class="font-semibold">{{ nome }}</h3>
+  <div class="overflow-x-auto rounded-lg border border-celula-borda bg-white p-2" tabindex="0" [attr.aria-label]="nome + '; role horizontalmente para ver todas as colunas'">
+    <div class="grid min-w-[19rem] grid-cols-[1.5rem_repeat(10,minmax(0,1fr))] gap-1" role="grid" [attr.aria-label]="nome + ', linhas A a J e colunas 1 a 10'">
+      <span aria-hidden="true"></span>
+      @for (coluna of colunas; track coluna) { <span class="grid aspect-square place-items-center text-xs" role="columnheader">{{ coluna }}</span> }
+      @for (linha of linhas; track linha) {
+        <span class="grid aspect-square place-items-center text-xs font-semibold" role="rowheader">{{ linha }}</span>
+        @for (coluna of colunas; track coluna) {
+          @let casaAtual = casa(linha, coluna);
+          @if (permitirAtaque) {
+            <button type="button" class="grid aspect-square min-w-0 place-items-center rounded border border-celula-borda text-xs hover:border-embarcacao focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-embarcacao disabled:cursor-not-allowed" [class.bg-red-100]="casaAtual.estado === 'acerto' || casaAtual.estado === 'destruida'" [class.bg-sky-100]="casaAtual.estado === 'agua'" [disabled]="!permitirAtaque" [attr.aria-label]="'Atacar ' + linha + coluna + ', ' + casaAtual.descricao" (click)="ataque.emit(casaAtual.coordenada)">{{ simbolo(casaAtual.estado) }}</button>
+          } @else {
+            <span class="grid aspect-square min-w-0 place-items-center rounded border border-celula-borda text-xs" role="gridcell" [class.bg-embarcacao]="casaAtual.estado === 'embarcacao'" [class.text-white]="casaAtual.estado === 'embarcacao'" [class.bg-red-100]="casaAtual.estado === 'acerto' || casaAtual.estado === 'destruida'" [class.bg-sky-100]="casaAtual.estado === 'agua'" [attr.aria-label]="linha + coluna + ', ' + casaAtual.descricao">{{ simbolo(casaAtual.estado) }}</span>
+          }
+        }
+      }
+    </div>
+  </div>
+</section>
