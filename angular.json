@@ -71,6 +71,14 @@
           "options": {
             "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
           }
+        },
+        "deploy": {
+          "builder": "angular-cli-ghpages:deploy",
+          "options": {
+            "baseHref": "https://academiadoprogramador-fullstack.github.io/batalha-naval-2026/",
+            "name": "Tiago Santini",
+            "email": "66257666+tiagosantini@users.noreply.github.com"
+          }
         }
       }
     }
