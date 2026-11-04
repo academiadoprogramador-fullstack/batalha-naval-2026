@@ -152,7 +152,7 @@ describe('App', () => {
     expect(elemento.textContent).toContain('Sua vez de atacar.');
     expect(elemento.querySelectorAll('[aria-label^="Atacar "]')).toHaveLength(100);
     expect(elemento.textContent).not.toContain('Porta-aviões');
-    expect(elemento.querySelectorAll('[aria-label$="não atacada"]')).toHaveLength(100);
+    expect(elemento.querySelectorAll('[aria-label$="não atacada"]')).toHaveLength(200);
     const alvo = elemento.querySelector<HTMLButtonElement>('[aria-label^="Atacar A10"]');
     expect(alvo?.tabIndex).toBe(0);
     expect(alvo?.classList.contains('aspect-square')).toBe(true);
@@ -165,7 +165,7 @@ describe('App', () => {
     expect(elemento.querySelector('[aria-label="Seu tabuleiro, linhas A a J e colunas 1 a 10"]')).toBeTruthy();
     expect(elemento.querySelector('[aria-label="Tabuleiro do computador, linhas A a J e colunas 1 a 10"]')).toBeTruthy();
     expect(elemento.textContent).toContain('O computador:');
-    expect(elemento.querySelectorAll('[aria-label$="não atacada"]')).toHaveLength(99);
+    expect(elemento.querySelectorAll('[aria-label$="não atacada"]')).toHaveLength(198);
     alvo?.click();
     fixture.detectChanges();
     expect(elemento.querySelector('[role="status"]')?.textContent).toContain('Tentativa recusada: A10 já foi atacada');
@@ -176,6 +176,7 @@ describe('App', () => {
       tabuleiroJogador: { set(tabuleiro: Tabuleiro): void; (): Tabuleiro };
       tabuleiroComputador: () => Tabuleiro | null;
       fase: () => string;
+      desfecho: () => string | null;
     };
     const casaFinal = { linha: 'E', coluna: 2 } as Coordenada;
     app.tabuleiroJogador.set({
@@ -186,6 +187,7 @@ describe('App', () => {
     elemento.querySelector<HTMLButtonElement>('[aria-label^="Atacar B10"]')?.click();
     fixture.detectChanges();
     expect(app.fase()).toBe('encerrada');
+    expect(app.desfecho()).toBe('derrota');
     expect(elemento.querySelector('[role="status"]')?.textContent).toContain('sua frota foi destruída');
     expect(elemento.querySelectorAll('[aria-label^="Atacar "]')).toHaveLength(0);
     expect(app.tabuleiroComputador()?.embarcacoes).toHaveLength(5);
@@ -265,6 +267,9 @@ describe('App', () => {
       tabuleiroJogador: { set(valor: Tabuleiro): void; (): Tabuleiro };
       tabuleiroComputador: { set(valor: Tabuleiro | null): void };
       mensagem: () => string;
+      desfecho: () => string | null;
+      resultadosJogador: () => readonly { tipo: string; coordenada: Coordenada; embarcacao?: string }[];
+      visaoJogador: () => readonly { coordenada: Coordenada; estado: string }[];
       atacarComputador(linha: string, coluna: number): void;
     };
     const jogador = frotaCompletaTeste();
@@ -277,8 +282,68 @@ describe('App', () => {
     app.fonteAleatoria = () => 0;
     app.atacarComputador('J', 10);
     expect(app.fase()).toBe('encerrada');
+    expect(app.desfecho()).toBe('derrota');
+    expect(app.resultadosJogador()).toHaveLength(1);
+    expect(app.resultadosJogador()[0]?.tipo).toBe('destruida');
+    expect(app.mensagem()).toContain('Destroyer');
+    const golpeFinal = app.resultadosJogador()[0]!.coordenada;
+    expect(app.visaoJogador().find((casa) => casa.coordenada.linha === golpeFinal.linha && casa.coordenada.coluna === golpeFinal.coluna)?.estado).toBe('destruida');
     expect(app.mensagem()).toContain('sua frota foi destruída');
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[role="status"]')?.textContent).toContain('sua frota foi destruída');
+  });
+
+  it('reinicia e permite posicionar uma frota nova antes de um segundo combate independente', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const app = fixture.componentInstance as unknown as {
+      fase: { set(valor: string): void; (): string };
+      desfecho: { set(valor: 'vitoria' | 'derrota' | null): void; (): string | null };
+      tabuleiroJogador: { set(valor: Tabuleiro): void; (): Tabuleiro };
+      tabuleiroComputador: { set(valor: Tabuleiro | null): void; (): Tabuleiro | null };
+      resultadosComputador: { set(valor: readonly unknown[]): void; (): readonly unknown[] };
+      resultadosJogador: { set(valor: readonly unknown[]): void; (): readonly unknown[] };
+      turno: () => string;
+      iniciarPreparacao(): void;
+      avancar(): void;
+      iniciarCombate(): void;
+      atacarComputador(linha: string, coluna: number): void;
+    };
+    app.fase.set('encerrada');
+    app.desfecho.set('vitoria');
+    app.tabuleiroJogador.set(frotaCompletaTeste());
+    app.tabuleiroComputador.set(frotaCompletaTeste());
+    app.resultadosComputador.set([{ tipo: 'agua', coordenada: { linha: 'A', coluna: 1 } }]);
+    app.resultadosJogador.set([{ tipo: 'acerto', coordenada: { linha: 'A', coluna: 1 } }]);
+    fixture.detectChanges();
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button')?.click();
+    fixture.detectChanges();
+    const elemento = fixture.nativeElement as HTMLElement;
+    expect(app.fase()).toBe('preparacao');
+    expect(app.desfecho()).toBeNull();
+    expect(app.tabuleiroJogador().embarcacoes).toHaveLength(0);
+    expect(app.resultadosComputador()).toHaveLength(0);
+    expect(app.resultadosJogador()).toHaveLength(0);
+    const frota = [['Porta-aviões', 'A'], ['Encouraçado', 'B'], ['Cruzador', 'C'], ['Submarino', 'D'], ['Destroyer', 'E']];
+    for (const [nome, linha] of frota) {
+      elemento.querySelector<HTMLButtonElement>(`button[aria-label^="${nome}"]`)?.click();
+      fixture.detectChanges();
+      elemento.querySelector<HTMLButtonElement>(`[aria-label="Posicionar em ${linha}1, livre"]`)?.click();
+      fixture.detectChanges();
+    }
+    app.avancar();
+    fixture.detectChanges();
+    expect(app.fase()).toBe('pronta');
+    app.iniciarCombate();
+    fixture.detectChanges();
+    expect(app.fase()).toBe('combate');
+    expect(app.turno()).toBe('jogador');
+    expect(elemento.querySelectorAll('[aria-label^="Atacar "]')).toHaveLength(100);
+    const inimigo = frotaCompletaTeste();
+    const coordenadaFinal = { linha: inimigo.embarcacoes[0]!.origem.linha, coluna: inimigo.embarcacoes[0]!.origem.coluna };
+    app.tabuleiroComputador.set({ ...inimigo, ataques: todasCoordenadas().filter((casa) => casa.linha !== coordenadaFinal.linha || casa.coluna !== coordenadaFinal.coluna) });
+    app.atacarComputador(coordenadaFinal.linha, coordenadaFinal.coluna);
+    expect(app.fase()).toBe('encerrada');
+    expect(app.desfecho()).toBe('vitoria');
   });
 });

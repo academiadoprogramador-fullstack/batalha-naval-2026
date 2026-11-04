@@ -61,6 +61,8 @@ export class App {
   protected readonly orientacao = signal<Orientacao>('horizontal');
   protected readonly mensagem = signal('Escolha uma embarcação e uma casa para posicioná-la.');
   protected readonly resultadosComputador = signal<readonly ResultadoAtaque[]>([]);
+  protected readonly resultadosJogador = signal<readonly ResultadoAtaque[]>([]);
+  protected readonly desfecho = signal<'vitoria' | 'derrota' | null>(null);
   protected readonly frotaJogadorCompleta = computed(() => frotaCompleta(this.tabuleiroJogador()));
   protected readonly frotaComputadorCompleta = computed(() => {
     const tabuleiro = this.tabuleiroComputador();
@@ -69,10 +71,10 @@ export class App {
   protected readonly podeAvancar = computed(() => this.frotaJogadorCompleta() && this.frotaComputadorCompleta());
   protected readonly visaoJogador = computed((): CasaCombate[] => this.linhas.flatMap((linha) => this.colunas.map((coluna) => {
     const coordenada = { linha, coluna } as Coordenada;
-    const atacada = this.tabuleiroJogador().ataques.some((ataque) => coordenadaParaTexto(ataque) === coordenadaParaTexto(coordenada));
+    const resultado = this.resultadoJogador(linha, coluna);
     const ocupada = this.casaOcupada(linha, coluna);
-    const estado = atacada ? (ocupada ? 'acerto' : 'agua') : ocupada ? 'embarcacao' : 'oculta';
-    return { coordenada, estado, descricao: atacada ? (ocupada ? 'acerto recebido' : 'água recebida') : ocupada ? 'embarcação' : 'sem ataque' } as CasaCombate;
+    const estado = resultado?.tipo === 'agua' ? 'agua' : resultado?.tipo === 'destruida' ? 'destruida' : resultado ? 'acerto' : ocupada ? 'embarcacao' : 'oculta';
+    return { coordenada, estado, descricao: this.nomeResultado(resultado) } as CasaCombate;
   })));
   protected readonly visaoComputador = computed((): CasaCombate[] => this.linhas.flatMap((linha) => this.colunas.map((coluna) => {
     const resultado = this.resultadoComputador(linha, coluna);
@@ -83,6 +85,10 @@ export class App {
   protected iniciarPreparacao(): void {
     this.tabuleiroJogador.set(criarTabuleiro());
     this.tabuleiroComputador.set(gerarFrota());
+    this.resultadosJogador.set([]);
+    this.resultadosComputador.set([]);
+    this.desfecho.set(null);
+    this.turno.set('jogador');
     this.tipoSelecionado.set('porta-avioes');
     this.orientacao.set('horizontal');
     this.mensagem.set('Escolha uma embarcação e uma casa para posicioná-la.');
@@ -156,6 +162,7 @@ export class App {
     this.resultadosComputador.update((resultados) => [...resultados, ataque.valor.resultado]);
     const textoJogador = this.textoResultado('Você', ataque.valor.resultado);
     if (ataque.valor.frotaDestruida) {
+      this.desfecho.set('vitoria');
       this.fase.set('encerrada');
       this.mensagem.set(`${textoJogador} Combate encerrado: a frota do computador foi destruída.`);
       return;
@@ -171,8 +178,10 @@ export class App {
     const resposta = registrarAtaque(this.tabuleiroJogador(), alvo);
     if (!resposta.ok) return;
     this.tabuleiroJogador.set(resposta.valor.tabuleiro);
+    this.resultadosJogador.update((resultados) => [...resultados, resposta.valor.resultado]);
     const textoComputador = this.textoResultado('O computador', resposta.valor.resultado);
     if (resposta.valor.frotaDestruida) {
+      this.desfecho.set('derrota');
       this.fase.set('encerrada');
       this.mensagem.set(`${textoJogador} ${textoComputador} Combate encerrado: sua frota foi destruída.`);
       return;
@@ -185,16 +194,16 @@ export class App {
     return this.resultadosComputador().find((r) => r.coordenada.linha === linha && r.coordenada.coluna === coluna);
   }
 
-  protected resultadoJogador(linha: string, coluna: number): boolean {
-    return this.tabuleiroJogador().ataques.some((a) => a.linha === linha && a.coluna === coluna);
+  protected resultadoJogador(linha: string, coluna: number): ResultadoAtaque | undefined {
+    return this.resultadosJogador().find((r) => r.coordenada.linha === linha && r.coordenada.coluna === coluna);
   }
 
   protected nomeResultado(resultado: ResultadoAtaque | undefined): string {
     if (!resultado) return 'não atacada';
-    return resultado.tipo === 'agua' ? 'água' : resultado.tipo === 'acerto' ? 'acerto' : 'embarcação destruída';
+    return resultado.tipo === 'agua' ? 'água recebida' : resultado.tipo === 'acerto' ? 'acerto recebido' : `destruiu ${NOMES_EMBARCACAO[resultado.embarcacao]}`;
   }
 
   private textoResultado(origem: string, resultado: ResultadoAtaque): string {
-    return `${origem}: ${coordenadaParaTexto(resultado.coordenada)}, ${this.nomeResultado(resultado)}.`;
+    return `${origem}: ${coordenadaParaTexto(resultado.coordenada)}, ${resultado.tipo === 'destruida' ? `embarcação destruída: ${NOMES_EMBARCACAO[resultado.embarcacao]}` : this.nomeResultado(resultado)}.`;
   }
 }

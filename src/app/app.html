@@ -93,6 +93,12 @@
           <app-tabuleiro-combate nome="Tabuleiro do computador" [casas]="visaoComputador()" [permitirAtaque]="fase() === 'combate' && turno() === 'jogador'" (ataque)="atacarComputador($event.linha, $event.coluna)" />
         </div>
         <p class="min-h-12 rounded-lg bg-slate-50 p-3 text-sm text-slate-700" role="status" aria-live="polite">{{ mensagem() }}</p>
+        @if (fase() === 'encerrada' && desfecho()) {
+          <section class="space-y-3 rounded-lg border border-celula-borda p-4" aria-labelledby="titulo-resultado">
+            <h3 id="titulo-resultado" class="text-xl font-bold">{{ desfecho() === 'vitoria' ? 'Você venceu!' : 'Você perdeu.' }}</h3>
+            <button type="button" class="min-h-12 rounded-lg bg-embarcacao px-5 py-3 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-embarcacao" (click)="iniciarPreparacao()">Jogar novamente</button>
+          </section>
+        }
       </section>
     }
   </main>

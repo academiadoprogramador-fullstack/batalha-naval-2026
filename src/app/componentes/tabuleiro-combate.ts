@@ -28,6 +28,6 @@ export class TabuleiroCombate {
   }
 
   protected simbolo(estado: EstadoCasaCombate): string {
-    return estado === 'agua' ? '·' : estado === 'embarcacao' ? '■' : estado === 'acerto' || estado === 'destruida' ? '×' : '';
+    return estado === 'agua' ? '·' : estado === 'embarcacao' ? '■' : estado === 'acerto' ? '×' : estado === 'destruida' ? '✹' : '';
   }
 }
