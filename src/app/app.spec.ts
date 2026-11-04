@@ -37,22 +37,46 @@ describe('App', () => {
   it('inicia a preparação com tabuleiro vazio e cinco embarcações pendentes', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
-    fixture.nativeElement.querySelector('button')?.click();
-    fixture.detectChanges();
 
     const elemento = fixture.nativeElement as HTMLElement;
     expect(elemento.querySelectorAll('[role="gridcell"]')).toHaveLength(100);
     expect(elemento.querySelectorAll('aside button[aria-pressed]')).toHaveLength(7);
     expect(elemento.textContent?.match(/Pendente/g)).toHaveLength(5);
-    expect(elemento.querySelector('button[disabled]')?.textContent).toContain('Avançar');
+    expect(elemento.textContent).not.toContain('tabuleiro do computador');
     expect(elemento.textContent).not.toContain('A1,');
+    expect(elemento.querySelector<HTMLButtonElement>('button')?.textContent).not.toContain('Iniciar partida');
+    expect([...elemento.querySelectorAll<HTMLButtonElement>('button')].find((botao) => botao.textContent?.includes('Iniciar combate'))?.disabled).toBe(true);
+  });
+
+  it('inicia o combate diretamente da preparação somente após completar as duas frotas', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const app = fixture.componentInstance as unknown as {
+      fase: () => string;
+      tabuleiroJogador: { set(valor: Tabuleiro): void };
+      iniciarCombate: () => void;
+    };
+    const elemento = fixture.nativeElement as HTMLElement;
+    const iniciar = [...elemento.querySelectorAll<HTMLButtonElement>('button')].find((botao) => botao.textContent?.includes('Iniciar combate'))!;
+    expect(app.fase()).toBe('preparacao');
+    expect(iniciar.disabled).toBe(true);
+    app.iniciarCombate();
+    expect(app.fase()).toBe('preparacao');
+    app.tabuleiroJogador.set(frotaCompletaTeste());
+    fixture.detectChanges();
+    expect(iniciar.disabled).toBe(false);
+    expect(app.fase()).toBe('preparacao');
+    iniciar.click();
+    fixture.detectChanges();
+    expect(app.fase()).toBe('combate');
+    expect(elemento.querySelector('[role="status"]')?.textContent).toContain('Combate iniciado. É a vez do jogador.');
+    expect(elemento.querySelectorAll('[aria-label^="Atacar "]')).toHaveLength(100);
+    expect(elemento.querySelectorAll('[aria-label$="não atacada"]')).toHaveLength(200);
   });
 
   it('mostra os rótulos do tabuleiro e atualiza as casas ocupadas após posicionar', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
-    fixture.nativeElement.querySelector('button')?.click();
-    fixture.detectChanges();
 
     const elemento = fixture.nativeElement as HTMLElement;
     expect(elemento.querySelector('[aria-label="Posicionar em B2, livre"]')).toBeTruthy();
@@ -69,8 +93,6 @@ describe('App', () => {
   it('permite escolher orientação e reposicionar embarcação sem perder casas em uma falha', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
-    fixture.nativeElement.querySelector('button')?.click();
-    fixture.detectChanges();
     const elemento = fixture.nativeElement as HTMLElement;
     elemento.querySelector<HTMLButtonElement>('button[aria-label^="Cruzador"]')?.click();
     [...elemento.querySelectorAll<HTMLButtonElement>('button')].find((botao) => botao.textContent?.trim() === 'Vertical')?.click();
@@ -98,8 +120,6 @@ describe('App', () => {
   it('aceita embarcações adjacentes e rejeita sobreposição sem alterar as anteriores', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
-    fixture.nativeElement.querySelector('button')?.click();
-    fixture.detectChanges();
     const elemento = fixture.nativeElement as HTMLElement;
     elemento.querySelector<HTMLButtonElement>('button[aria-label^="Destroyer"]')?.click();
     fixture.detectChanges();
@@ -121,8 +141,6 @@ describe('App', () => {
   it('mantém a frota do computador oculta até concluir a preparação e inicia combate explicitamente', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
-    fixture.nativeElement.querySelector('button')?.click();
-    fixture.detectChanges();
     const elemento = fixture.nativeElement as HTMLElement;
     expect(elemento.textContent).not.toContain('tabuleiro do computador');
     const frota = [
@@ -138,13 +156,6 @@ describe('App', () => {
       elemento.querySelector<HTMLButtonElement>(`[aria-label="Posicionar em ${linha}1, livre"]`)?.click();
       fixture.detectChanges();
     }
-    const avancar = [...elemento.querySelectorAll('button')].find((botao) => botao.textContent?.includes('Avançar'));
-    expect(avancar?.disabled).toBe(false);
-    avancar?.click();
-    fixture.detectChanges();
-    expect(elemento.textContent).toContain('Preparação concluída');
-    expect(elemento.textContent).toContain('A partida ainda não começou.');
-    expect(elemento.textContent).not.toContain('A1');
     const iniciar = [...elemento.querySelectorAll('button')].find((botao) => botao.textContent?.includes('Iniciar combate'));
     expect(iniciar?.disabled).toBe(false);
     iniciar?.click();
@@ -190,6 +201,10 @@ describe('App', () => {
     expect(app.desfecho()).toBe('derrota');
     expect(elemento.querySelector('[role="status"]')?.textContent).toContain('sua frota foi destruída');
     expect(elemento.querySelectorAll('[aria-label^="Atacar "]')).toHaveLength(0);
+    expect(elemento.querySelector('[role="dialog"] h3')?.textContent).toContain('Você perdeu.');
+    expect(elemento.querySelector('[role="dialog"] button')?.textContent).toContain('Jogar novamente');
+    expect(elemento.querySelector('[aria-label^="E2, destruiu"]')).toBeTruthy();
+    expect(document.activeElement).toBe(elemento.querySelector('[role="dialog"] button'));
     expect(app.tabuleiroComputador()?.embarcacoes).toHaveLength(5);
   });
 
@@ -223,6 +238,9 @@ describe('App', () => {
     expect(app.tabuleiroJogador().ataques).toHaveLength(0);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[role="status"]')?.textContent).toContain('Combate encerrado');
+    expect(fixture.nativeElement.querySelector('[role="dialog"] h3')?.textContent).toContain('Você venceu!');
+    expect(fixture.nativeElement.querySelectorAll('[aria-label^="Atacar "]')).toHaveLength(0);
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('[role="dialog"] button'));
   });
 
   it('registra acerto e água, recusando repetição e ataque fora do turno sem mutação', async () => {
@@ -305,7 +323,6 @@ describe('App', () => {
       resultadosJogador: { set(valor: readonly unknown[]): void; (): readonly unknown[] };
       turno: () => string;
       iniciarPreparacao(): void;
-      avancar(): void;
       iniciarCombate(): void;
       atacarComputador(linha: string, coluna: number): void;
     };
@@ -316,9 +333,14 @@ describe('App', () => {
     app.resultadosComputador.set([{ tipo: 'agua', coordenada: { linha: 'A', coluna: 1 } }]);
     app.resultadosJogador.set([{ tipo: 'acerto', coordenada: { linha: 'A', coluna: 1 } }]);
     fixture.detectChanges();
-    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button')?.click();
+    const botaoReiniciar = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button')]
+      .find((botao) => botao.textContent?.includes('Jogar novamente'))!;
+    botaoReiniciar.focus();
+    expect(document.activeElement).toBe(botaoReiniciar);
+    botaoReiniciar.click();
     fixture.detectChanges();
     const elemento = fixture.nativeElement as HTMLElement;
+    expect(document.activeElement).toBe(elemento.querySelector('#titulo-preparacao'));
     expect(app.fase()).toBe('preparacao');
     expect(app.desfecho()).toBeNull();
     expect(app.tabuleiroJogador().embarcacoes).toHaveLength(0);
@@ -331,9 +353,6 @@ describe('App', () => {
       elemento.querySelector<HTMLButtonElement>(`[aria-label="Posicionar em ${linha}1, livre"]`)?.click();
       fixture.detectChanges();
     }
-    app.avancar();
-    fixture.detectChanges();
-    expect(app.fase()).toBe('pronta');
     app.iniciarCombate();
     fixture.detectChanges();
     expect(app.fase()).toBe('combate');

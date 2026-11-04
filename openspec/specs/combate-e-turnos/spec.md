@@ -7,11 +7,11 @@ Permitir uma partida de Batalha Naval entre jogador e computador com ataques alt
 ## Requirements
 
 ### Requirement: Entrada no combate
-O sistema SHALL permitir iniciar o combate somente depois que as frotas dos dois participantes estiverem completas, preservando suas disposições.
+O sistema SHALL permitir iniciar o combate diretamente pela ação disponível na preparação somente depois que as frotas dos dois participantes estiverem completas, preservando suas disposições.
 
 #### Scenario: Combate após preparação
-- **WHEN** a preparação é concluída com as duas frotas completas e a pessoa inicia o combate
-- **THEN** o sistema apresenta os tabuleiros de combate com as frotas preservadas e indica que é a vez do jogador
+- **WHEN** as duas frotas estão completas e a pessoa aciona iniciar combate na preparação
+- **THEN** o sistema apresenta imediatamente os dois tabuleiros de combate com as frotas preservadas, sem tela intermediária ou ataques registrados, e indica que é a vez do jogador
 
 #### Scenario: Preparação incompleta
 - **WHEN** uma das frotas ainda não está completa

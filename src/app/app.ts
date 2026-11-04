@@ -1,4 +1,4 @@
-import { Component, computed, signal } from '@angular/core';
+import { afterRenderEffect, Component, computed, ElementRef, signal, viewChild } from '@angular/core';
 import { LucideShip } from '@lucide/angular';
 import {
   LINHAS,
@@ -43,8 +43,10 @@ const CORES_EMBARCACAO: Readonly<Record<TipoEmbarcacao, string>> = {
   templateUrl: './app.html',
 })
 export class App {
+  private readonly tituloPreparacao = viewChild<ElementRef<HTMLElement>>('tituloPreparacao');
+  private readonly botaoReiniciar = viewChild<ElementRef<HTMLButtonElement>>('botaoReiniciar');
   protected readonly nomeJogo = signal('Batalha Naval');
-  protected readonly fase = signal<'apresentacao' | 'preparacao' | 'pronta' | 'combate' | 'encerrada'>('apresentacao');
+  protected readonly fase = signal<'preparacao' | 'combate' | 'encerrada'>('preparacao');
   protected readonly turno = signal<'jogador' | 'computador'>('jogador');
   protected fonteAleatoria: () => number = Math.random;
   protected readonly linhas = LINHAS;
@@ -56,7 +58,7 @@ export class App {
   }));
   protected readonly coresEmbarcacao = CORES_EMBARCACAO;
   protected readonly tabuleiroJogador = signal<Tabuleiro>(criarTabuleiro());
-  protected readonly tabuleiroComputador = signal<Tabuleiro | null>(null);
+  protected readonly tabuleiroComputador = signal<Tabuleiro | null>(gerarFrota());
   protected readonly tipoSelecionado = signal<TipoEmbarcacao>('porta-avioes');
   protected readonly orientacao = signal<Orientacao>('horizontal');
   protected readonly mensagem = signal('Escolha uma embarcação e uma casa para posicioná-la.');
@@ -81,6 +83,19 @@ export class App {
     const estado = resultado?.tipo === 'agua' ? 'agua' : resultado?.tipo === 'destruida' ? 'destruida' : resultado ? 'acerto' : 'oculta';
     return { coordenada: { linha, coluna } as Coordenada, estado, descricao: this.nomeResultado(resultado) } as CasaCombate;
   })));
+
+  constructor() {
+    let faseAnterior = this.fase();
+    afterRenderEffect(() => {
+      const faseAtual = this.fase();
+      if (faseAtual === faseAnterior) return;
+      faseAnterior = faseAtual;
+      const elemento = faseAtual === 'encerrada'
+        ? this.botaoReiniciar()?.nativeElement
+        : faseAtual === 'preparacao' ? this.tituloPreparacao()?.nativeElement : undefined;
+      elemento?.focus();
+    });
+  }
 
   protected iniciarPreparacao(): void {
     this.tabuleiroJogador.set(criarTabuleiro());
@@ -134,15 +149,8 @@ export class App {
     });
   }
 
-  protected avancar(): void {
-    if (this.podeAvancar()) {
-      this.mensagem.set('Preparação concluída. As duas frotas estão prontas.');
-      this.fase.set('pronta');
-    }
-  }
-
   protected iniciarCombate(): void {
-    if (this.fase() !== 'pronta' || !this.podeAvancar()) return;
+    if (this.fase() !== 'preparacao' || !this.podeAvancar()) return;
     this.turno.set('jogador');
     this.mensagem.set('Combate iniciado. É a vez do jogador.');
     this.fase.set('combate');

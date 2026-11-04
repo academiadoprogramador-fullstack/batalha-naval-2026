@@ -7,21 +7,10 @@
   </header>
 
   <main class="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:py-10">
-    @if (fase() === 'apresentacao') {
-      <section class="mx-auto flex max-w-2xl flex-col items-center gap-6 py-12 text-center sm:py-20" aria-labelledby="titulo-apresentacao">
-        <div class="rounded-full bg-celula p-5 text-embarcacao" aria-hidden="true"><svg lucideShip class="size-12"></svg></div>
-        <div class="space-y-2">
-          <h2 id="titulo-apresentacao" class="text-3xl font-bold tracking-tight sm:text-4xl">Prepare sua frota</h2>
-          <p class="text-base text-slate-600 sm:text-lg">Posicione suas cinco embarcações no tabuleiro para deixar a partida pronta.</p>
-        </div>
-        <button type="button" class="rounded-lg bg-embarcacao px-6 py-3 font-semibold text-white transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-embarcacao" (click)="iniciarPreparacao()">
-          Iniciar partida
-        </button>
-      </section>
-    } @else if (fase() === 'preparacao') {
+    @if (fase() === 'preparacao') {
       <section class="space-y-6" aria-labelledby="titulo-preparacao">
         <div class="space-y-1">
-          <h2 id="titulo-preparacao" class="text-2xl font-bold">Prepare sua frota</h2>
+          <h2 #tituloPreparacao id="titulo-preparacao" tabindex="-1" class="text-2xl font-bold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-embarcacao">Prepare sua frota</h2>
           <p class="text-slate-600">Selecione uma embarcação, escolha a orientação e indique a casa de origem.</p>
         </div>
 
@@ -69,18 +58,11 @@
 
             <p class="min-h-12 rounded-lg bg-slate-50 p-3 text-sm text-slate-700" role="status" aria-live="polite">{{ mensagem() }}</p>
             <div class="space-y-2">
-              <button type="button" class="min-h-12 w-full rounded-lg bg-embarcacao px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" [disabled]="!podeAvancar()" (click)="avancar()">Avançar para a partida</button>
+              <button type="button" class="min-h-12 w-full rounded-lg bg-embarcacao px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" [disabled]="!podeAvancar()" (click)="iniciarCombate()">Iniciar combate</button>
               @if (!podeAvancar()) { <p class="text-sm text-slate-600">Posicione as cinco embarcações para concluir a preparação.</p> }
             </div>
           </aside>
         </div>
-      </section>
-    } @else if (fase() === 'pronta') {
-      <section class="mx-auto max-w-xl space-y-4 py-12 text-center" aria-labelledby="titulo-pronto">
-        <div class="mx-auto grid size-16 place-items-center rounded-full bg-celula text-embarcacao" aria-hidden="true"><svg lucideShip class="size-8"></svg></div>
-        <h2 id="titulo-pronto" class="text-2xl font-bold">Preparação concluída</h2>
-        <p class="text-slate-600" role="status">As duas frotas estão prontas. A partida ainda não começou.</p>
-        <button type="button" class="min-h-12 rounded-lg bg-embarcacao px-6 py-3 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-embarcacao" [disabled]="!podeAvancar()" (click)="iniciarCombate()">Iniciar combate</button>
       </section>
     } @else {
       <section class="space-y-5" aria-labelledby="titulo-combate">
@@ -88,17 +70,20 @@
           <h2 id="titulo-combate" class="text-2xl font-bold">{{ fase() === 'encerrada' ? 'Combate encerrado' : 'Combate' }}</h2>
           <p class="text-slate-600">{{ turno() === 'jogador' && fase() === 'combate' ? 'Sua vez de atacar.' : fase() === 'encerrada' ? 'A partida terminou.' : 'Vez do computador.' }}</p>
         </div>
-        <div class="grid gap-6 lg:grid-cols-2">
+        <div class="relative grid gap-6 lg:grid-cols-2">
           <app-tabuleiro-combate nome="Seu tabuleiro" [casas]="visaoJogador()" />
           <app-tabuleiro-combate nome="Tabuleiro do computador" [casas]="visaoComputador()" [permitirAtaque]="fase() === 'combate' && turno() === 'jogador'" (ataque)="atacarComputador($event.linha, $event.coluna)" />
+          @if (fase() === 'encerrada' && desfecho()) {
+            <div class="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/50 p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="titulo-resultado">
+              <section class="w-full max-w-sm space-y-3 rounded-xl border border-celula-borda bg-white p-5 text-center shadow-xl sm:p-6">
+                <h3 id="titulo-resultado" class="text-xl font-bold">{{ desfecho() === 'vitoria' ? 'Você venceu!' : 'Você perdeu.' }}</h3>
+                <p class="text-slate-700">{{ desfecho() === 'vitoria' ? 'A frota do computador foi destruída.' : 'Sua frota foi destruída.' }}</p>
+                <button #botaoReiniciar type="button" class="min-h-12 w-full rounded-lg bg-embarcacao px-5 py-3 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-embarcacao" (click)="iniciarPreparacao()">Jogar novamente</button>
+              </section>
+            </div>
+          }
         </div>
         <p class="min-h-12 rounded-lg bg-slate-50 p-3 text-sm text-slate-700" role="status" aria-live="polite">{{ mensagem() }}</p>
-        @if (fase() === 'encerrada' && desfecho()) {
-          <section class="space-y-3 rounded-lg border border-celula-borda p-4" aria-labelledby="titulo-resultado">
-            <h3 id="titulo-resultado" class="text-xl font-bold">{{ desfecho() === 'vitoria' ? 'Você venceu!' : 'Você perdeu.' }}</h3>
-            <button type="button" class="min-h-12 rounded-lg bg-embarcacao px-5 py-3 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-embarcacao" (click)="iniciarPreparacao()">Jogar novamente</button>
-          </section>
-        }
       </section>
     }
   </main>

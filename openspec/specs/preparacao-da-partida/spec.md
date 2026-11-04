@@ -7,11 +7,11 @@ Permitir que a pessoa inicie e prepare uma partida de Batalha Naval, organize su
 ## Requirements
 
 ### Requirement: Entrada na preparação
-O sistema SHALL oferecer uma apresentação inicial com uma ação para iniciar a preparação de uma partida.
+O sistema SHALL apresentar diretamente a preparação ao abrir a aplicação, sem exigir ação em uma apresentação inicial.
 
 #### Scenario: Início da preparação
-- **WHEN** a pessoa aciona a opção de iniciar a partida na apresentação inicial
-- **THEN** o sistema apresenta a preparação com o tabuleiro do jogador vazio e as cinco embarcações ainda não posicionadas
+- **WHEN** a pessoa abre a aplicação para uma nova partida
+- **THEN** a preparação aparece com o tabuleiro do jogador vazio, cinco embarcações pendentes e a frota do computador gerada sem exibir suas posições
 
 ### Requirement: Visualização da frota em preparação
 O sistema SHALL apresentar um tabuleiro de 10 linhas A–J e 10 colunas 1–10, junto com a composição da frota e o estado de posicionamento de cada embarcação.
@@ -69,16 +69,16 @@ O sistema SHALL permitir selecionar embarcações, alterar orientação e escolh
 - **THEN** a interface indica textualmente o estado ou erro, sem depender apenas de cor
 
 ### Requirement: Prontidão das duas frotas
-O sistema SHALL gerar uma frota completa para o computador sem exibir suas posições e permitir avançar somente quando as frotas do jogador e do computador estiverem completas.
+O sistema SHALL gerar uma frota completa para o computador sem exibir suas posições e SHALL disponibilizar a ação de iniciar combate diretamente na preparação somente quando as frotas do jogador e do computador estiverem completas.
 
 #### Scenario: Frota incompleta
-- **WHEN** falta posicionar qualquer uma das embarcações do jogador
-- **THEN** a ação de avançar permanece indisponível e a interface indica que a preparação ainda não terminou
+- **WHEN** falta posicionar qualquer uma das embarcações do jogador ou a frota do computador não está completa
+- **THEN** a ação de iniciar combate permanece indisponível e a interface indica que a preparação ainda não terminou
 
 #### Scenario: Duas frotas completas
 - **WHEN** a frota do jogador está completa e a do computador foi gerada integralmente
-- **THEN** a ação de avançar fica disponível sem revelar as posições do computador
+- **THEN** a ação de iniciar combate fica disponível na preparação, sem revelar as posições do computador e sem iniciar o combate automaticamente
 
 #### Scenario: Preparação concluída
-- **WHEN** a pessoa aciona a opção de avançar com ambas as frotas prontas
-- **THEN** o sistema conserva ambas as frotas e indica que a preparação foi concluída, sem efetuar ataques nesta etapa
+- **WHEN** a pessoa aciona a opção de iniciar combate com ambas as frotas prontas
+- **THEN** o sistema conserva ambas as frotas e passa diretamente para o combate sem efetuar ataques durante a transição ou apresentar uma tela de confirmação intermediária
